@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>딴생각 금지구역: 출근길 탈출 RPG</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        #gameContainer { display: flex; height: 100vh; }
+        #gameCanvas {
+            background: #2c3e50;
+            border: 2px solid #444;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        #sidePanel {
+            width: 320px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-left: 2px solid #444;
+        }
+        .status-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .status-title {
+            font-weight: 700;
+            font-size: 14px;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        .emotion-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            padding: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        .emotion-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .controls {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #bdc3c7;
+        }
+        .game-title {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #444;
+        }
+        .chapter-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid #3498db;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .chapter-title { color: #3498db; font-weight: 600; font-size: 16px; }
+        .chapter-desc { color: #ecf0f1; font-size: 12px; margin-top: 5px; }
+        #messageBox {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 340px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            padding: 0;
+            color: #ecf0f1;
+            font-weight: 600;
+            display: none;
+            z-index: 100;
+            box-shadow: none;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* --- 말풍선 & NPC 스타일 전체 적용 --- */
+        .msg-bubble {
+            /*animation: popAppear 0.46s cubic-bezier(.37,1.65,.71,.71), bubbleWiggle 2.5s 0.25s infinite;*/
+            animation: popAppear 0.46s cubic-bezier(.37,1.65,.71,.71);
+            background: rgba(30,45,75,0.93);
+            border-radius: 16px 24px 20px 18px/22px 21px 16px 24px;
+            box-shadow: 0 8px 28px #0006, 0 0px 0px #fff3 inset;
+            padding: 20px 18px 18px 18px;
+            margin-bottom: 8px;
+            border: 2px solid #1f6ce6;
+            position: relative;
+            max-width: 440px;
+            color: #f3f7fb;
+            font-size: 15px;
+            transition: box-shadow .18s;
+        }
+        .msg-bubble:last-child { margin-bottom:0; }
+
+        /* NPC별 테마 */
+        .npc-wugi { border-color: #a3d8f4; background: rgba(43, 87, 174, 0.94);}
+        .npc-yeji { border-color: #e74c3c; background: rgba(174, 60, 60, 0.92);}
+        .npc-ryu  { border-color: #f8c471; background: rgba(180,145,70,0.91);}
+        .npc-system { border-color: #7f8c8d; background: rgba(50,55,65,0.96);}
+        .npc-player { border-color: #51f06b; background: rgba(40,90,50,0.95);}
+
+        .npc-profile {
+            width: 40px; height: 40px;
+            margin-right: 13px;
+            border-radius: 11px;
+            border: 2.5px solid #fff6;
+            background: #222c;
+            image-rendering: pixelated;
+            box-shadow: 0 2px 12px #0008;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+            animation: avatarPop 0.5s;
+        }
+        .npc-profile img { width: 80%; height: 80%; object-fit: contain; }
+
+        @keyframes bubbleWiggle {
+            0%, 100% { filter: blur(0px) brightness(1);}
+            7%   { transform: scale(1.03,0.98) rotate(-2deg);}
+            12%  { transform: scale(0.98,1.02) rotate(2deg);}
+            18%  { filter: blur(1px) brightness(1.05);}
+            40%  { transform: scale(1.01,1.01);}
+            50%  { filter: blur(0.5px);}
+            62%  { transform: scale(1,1) rotate(0deg);}
+        }
+        @keyframes avatarPop {
+            0%   { transform: scale(0.5) rotate(-10deg); opacity: 0;}
+            70%  { transform: scale(1.12) rotate(5deg);}
+            100% { transform: scale(1)   rotate(0); opacity: 1;}
+        }
+        @keyframes popAppear {
+            0%   { transform: scale(0.7) translateY(38px); opacity: 0;}
+            70%  { transform: scale(1.08) translateY(-4px);}
+            100% { transform: scale(1)   translateY(0); opacity: 1;}
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="sidePanel">
+            <div class="game-title">
+                <h2>딴생각 금지구역</h2>
+                <div style="font-size: 12px; color: #3498db;">출근길 탈출 RPG</div>
+            </div>
+            <div class="chapter-info">
+                <div class="chapter-title">1장: 출근길의 딴생각</div>
+                <div class="chapter-desc">지하철역에서 사무실까지, 딴생각을 수집하며 출근하세요</div>
+                <div class="progress-bar"><div class="progress-fill" id="progressBar"></div></div>
+            </div>
+            <div class="status-section">
+                <div class="status-title">수집한 딴생각</div>
+                <div id="emotionList">
+                    <div style="color: #7f8c8d; font-size: 12px;">아직 딴생각이 없습니다</div>
+                </div>
+            </div>
+            <div class="status-section">
+                <div class="status-title">조작법</div>
+                <div class="controls">
+                    <div>↑↓←→ : 걷기</div>
+                    <div>Enter : 메시지 넘기기</div>
+                    <div>☕ 🚇 📱 : 딴생각 수집</div>
+                    <div>🏢 : 사무실 도착</div>
+                </div>
+            </div>
+            <div class="status-section">
+                <div class="status-title">출근 상황</div>
+                <div class="controls">
+                    <div>현재 위치: <span id="playerPos">지하철역</span></div>
+                    <div>딴생각 수집: <span id="collectCount">0/5</span></div>
+                    <div>출근 진행도: <span id="timeInfo">8:00 AM</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="messageBox"></div>
+    <script>
+        // 게임 설정
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const TILE_SIZE = 32;
+        const MAP_WIDTH = 25;
+        const MAP_HEIGHT = 19;
+
+        // 게임 상태
+        const gameState = {
+            player: { x: 12, y: 17, char: '🚶‍♂️' },
+            emotions: [],
+            collectedEmotions: [],
+            totalEmotions: 5,
+            gameComplete: false,
+            currentTime: '8:00 AM',
+            messageQueue: [],
+            currentMessageIndex: 0
+        };
+
+        // 출근길 딴생각 타입 정의
+        const emotionTypes = [
+            { type: '커피 생각', icon: '☕', color: '#8b4513', desc: '카페라떼가 마시고 싶다...' },
+            { type: '지하철 피로', icon: '🚇', color: '#34495e', desc: '또 지연이네, 언제 도착하지?' },
+            { type: '휴대폰 확인', icon: '📱', color: '#3498db', desc: '메시지 왔나? SNS 좀 봐야지' },
+            { type: '점심 메뉴', icon: '🍚', color: '#e67e22', desc: '오늘 점심은 뭘 먹을까?' },
+            { type: '퇴근 기대', icon: '🏠', color: '#27ae60', desc: '퇴근하면 뭐하지? 집에 가고 싶다' }
+        ];
+
+        // 예쁜 출근길 맵 (6: 나무, 7: 카페, 8: 편의점, 9: 벤치)
+        const gameMap = [
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,6,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,6,0,0,0,0],
+            [0,0,1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,0,0,7,0],
+            [0,0,1,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,1,0,0,0,0],
+            [0,0,1,0,6,0,0,9,0,0,0,1,1,1,0,0,8,0,0,0,1,0,0,0,0],
+            [0,0,1,1,1,1,5,5,5,5,5,5,5,5,5,5,5,1,1,1,1,0,0,0,0],
+            [0,0,0,0,1,1,5,5,5,5,5,5,5,5,5,5,5,1,1,0,0,0,0,0,0],
+            [0,0,0,0,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,0,6,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,1,0,0,0,0],
+            [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+            [0,0,0,0,1,0,0,0,6,0,2,1,1,1,2,0,0,0,0,0,1,0,0,0,0],
+            [0,0,0,0,1,0,0,0,0,0,1,1,1,1,1,0,9,0,0,0,1,0,0,0,0],
+            [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+            [0,0,0,0,0,0,6,0,0,0,0,1,2,1,0,0,0,0,6,0,0,0,0,0,0],
+            [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+            [0,0,0,0,0,0,1,1,1,4,4,4,4,4,4,4,1,1,1,0,0,0,0,0,0],
+            [0,0,0,0,0,0,0,0,0,4,4,4,1,4,4,4,0,0,0,0,0,0,0,0,0]
+        ];
+
+        // 딴생각 조각 초기화
+        function initEmotions() {
+            let emotionIndex = 0;
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    if (gameMap[y][x] === 2 && emotionIndex < emotionTypes.length) {
+                        gameState.emotions.push({
+                            x: x,
+                            y: y,
+                            ...emotionTypes[emotionIndex],
+                            collected: false
+                        });
+                        emotionIndex++;
+                    }
+                }
+            }
+        }
+
+        // 키보드 입력 처리
+        const keys = {};
+        let isShowingMessage = false;
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === 'Enter' && isShowingMessage) {
+                processNextMessage();
+            }
+        });
+        document.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+        // 메시지 큐 처리
+        function processNextMessage() {
+            gameState.currentMessageIndex++;
+            if (gameState.currentMessageIndex < gameState.messageQueue.length) {
+                showQueuedMessage(gameState.messageQueue[gameState.currentMessageIndex]);
+            } else {
+                const messageBox = document.getElementById('messageBox');
+                messageBox.style.display = 'none';
+                isShowingMessage = false;
+                gameState.messageQueue = [];
+                gameState.currentMessageIndex = 0;
+            }
+        }
+        // 메시지 큐에 추가
+        function addToMessageQueue(messageData) {
+            gameState.messageQueue = messageData;
+            gameState.currentMessageIndex = 0;
+            showQueuedMessage(messageData[0]);
+        }
+        // 큐에 있는 메시지 표시
+        function showQueuedMessage(messageData) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.innerHTML = messageData.html;
+            messageBox.style.display = 'block';
+            isShowingMessage = true;
+        }
+
+        // 플레이어 이동
+        function movePlayer() {
+            if (isShowingMessage) return;
+            let newX = gameState.player.x;
+            let newY = gameState.player.y;
+            if (keys['ArrowUp'] || keys['w']) newY--;
+            if (keys['ArrowDown'] || keys['s']) newY++;
+            if (keys['ArrowLeft'] || keys['a']) newX--;
+            if (keys['ArrowRight'] || keys['d']) newX++;
+            if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT) {
+                const targetTile = gameMap[newY][newX];
+                if (targetTile !== 0) {
+                    gameState.player.x = newX;
+                    gameState.player.y = newY;
+                    updatePlayerPosition();
+                    checkEmotionCollection();
+                    checkOfficeReached();
+                }
+            }
+        }
+
+        // 딴생각 수집 체크
+        function checkEmotionCollection() {
+            gameState.emotions.forEach(emotion => {
+                if (!emotion.collected &&
+                    emotion.x === gameState.player.x &&
+                    emotion.y === gameState.player.y) {
+
+                    emotion.collected = true;
+                    gameState.collectedEmotions.push(emotion);
+
+                    // 메시지 큐 생성
+                    let messages = [];
+                    // 기본 딴생각 메시지 (시스템 말풍선)
+                    messages.push({
+                        html: `
+                            <div class="msg-bubble npc-system" style="display:flex;align-items:flex-start;">
+                                <div class="npc-profile">
+                                    <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23678be3'/><rect x='6' y='10' width='20' height='14' fill='%23d6e3fc'/></svg>" alt="시스템 프로필">
+                                </div>
+                                <div>
+                                    <div style="font-weight: bold; color: #3498db; font-size:15px;">SYSTEM</div>
+                                    <div style="margin-top:2px;font-size: 14px;">
+                                        💭 "${emotion.type}" 딴생각을 했습니다!<br>
+                                        <span style="color:#bdc3c7;">${emotion.desc}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                                Press Enter to continue...
+                            </div>
+                        `
+                    });
+
+                    // 휴대폰 확인일 때 추가 메시지들
+                    if (emotion.icon === '📱') {
+                        // 인스타 릴스 메시지
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="우기 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기</div>
+                                        <div style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); padding: 12px; border-radius: 10px; color: white; margin-top:7px;">
+                                            <span style="font-weight:500;">Instagram</span><br>
+                                            <span style="background:rgba(255,255,255,0.15); padding:7px 10px; border-radius:7px; display:inline-block; margin-top:8px;">📹 <strong>hxojxx님</strong>이 릴스를 보냈습니다!</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; margin-top: 10px; text-align: center; opacity: 0.85;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+
+                        // 2. ‘여행갈때 친구 3명 무리 특’ 릴스 소개 (썸네일+애니 효과)
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="효진 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기</div>
+                                        <div style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); padding: 13px; border-radius: 14px; color: white; margin-top:8px; box-shadow:0 6px 32px rgba(0,0,0,0.23);">
+                                            <div style="font-size:15px; font-weight:bold; margin-bottom:7px; line-height:1.3;">
+                                                <span style="background:rgba(0,0,0,0.11); padding:5px 12px; border-radius:9px; font-weight:700; font-size:16px;">
+                                                    여행갈때 친구 3명 무리 특
+                                                </span>
+                                            </div>
+                                            <img src="https://images.unsplash.com/photo-1464983953574-0892a716854b?fit=crop&w=400&q=80"
+                                                style="width:100%; border-radius:10px; margin:5px 0 8px 0; box-shadow:0 2px 16px #0005; aspect-ratio:4/3; object-fit:cover; animation: pulseThumb 1.2s infinite alternate;">
+                                            <div style="margin-top: 6px; font-size:13px; color:#ffe;">
+                                                #여행스타그램 #친구무리 #웃긴영상
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <style>
+                                @keyframes pulseThumb { 0%{filter:brightness(0.95);} 100%{filter:brightness(1.07) drop-shadow(0 0 12px #fff3);} }
+                                </style>
+                                <div style="font-size: 10.5px; margin-top: 9px; text-align: center; opacity: 0.83;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+                    }
+
+                    // 이예지 불평 메시지
+                    messages.push({
+                        html: `
+                            <div class="msg-bubble npc-yeji" style="display:flex;align-items:flex-start;">
+                                <div class="npc-profile">
+                                    <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23e74c3c'/><rect x='7' y='10' width='18' height='17' fill='%23fff6f3'/><rect x='11' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='18' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='14' y='24' width='4' height='2' fill='%23e8c4d7'/></svg>" alt="이예지 프로필">
+                                </div>
+                                <div>
+                                    <div style="font-weight: bold; color: #e74c3c; font-size:15px;">이예지 (고등학교 친구)</div>
+                                    <div style="margin-top:4px; background: rgba(231, 76, 60, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                                        "야! 저기서 방향키 한번 누르면 저기로 가지는데 어케 먹으라는 거죠? 개발자 누고? 😤"
+                                    </div>
+                                    <div style="font-size: 11px; color: #7f8c8d; margin-top: 7px;">
+                                        * 고등학교 때부터 봐온 친구 이예지가 게임 조작에 대해 불만을 표했습니다
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                Press Enter to continue...
+                            </div>
+                        `
+                    });
+
+                    // 메시지 큐 시작
+                    addToMessageQueue(messages);
+
+                    // 류시욱 NPC 대사 (딴생각 2개일 때 1번만)
+                    if (gameState.collectedEmotions.length === 2 && !gameState.ryuEventTriggered) {
+                        gameState.ryuEventTriggered = true;
+                        addToMessageQueue([
+                            {
+                                html: `
+                                    <div class="msg-bubble npc-ryu" style="display:flex;align-items:flex-start;">
+                                        <div class="npc-profile">
+                                            <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23f8c471'/><rect x='7' y='9' width='18' height='18' fill='%23fffbe6'/><rect x='11' y='15' width='3' height='3' fill='%23dba84e'/><rect x='18' y='15' width='3' height='3' fill='%23dba84e'/><rect x='14' y='23' width='4' height='2' fill='%23ffe1a3'/></svg>" alt="류시욱 프로필">
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: bold; color: #f8c471; font-size:15px;">류시욱</div>
+                                            <div style="font-size: 13px; color: #eee; margin-top: 4px; line-height:1.6;">
+                                                [우기 🎀🤍🍬🐻] [오후 4:07] 아 한칸씩<br>
+                                                [우기 🎀🤍🍬🐻] [오후 4:07] 안움지깅고<br>
+                                                [우기 🎀🤍🍬🐻] [오후 4:07] 졸라 예민하게 움직여서<br>
+                                                [우기 🎀🤍🍬🐻] [오후 4:07] 답답ㅎ래요<br>
+                                                [우기 🎀🤍🍬🐻] [오후 4:07] 썅
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                                        Press Enter to continue...
+                                    </div>
+                                `
+                            }
+                        ]);
+                    }
+
+                    updateEmotionList();
+                    updateProgress();
+                    updateTime();
+                }
+            });
+        }
+
+        // 사무실 도달 체크
+        function checkOfficeReached() {
+            if (gameMap[gameState.player.y][gameState.player.x] === 3) {
+                if (gameState.collectedEmotions.length === gameState.totalEmotions) {
+                    gameState.gameComplete = true;
+                    showYejiHugMessage();
+                } else {
+                    addToMessageQueue([{
+                        html: `
+                            <div class="msg-bubble npc-system">
+                                <div style="font-weight: bold; color: #e67e22;">SYSTEM</div>
+                                <div style="margin-top:7px;">
+                                    🏢 사무실에 도착했지만... 딴생각이 부족해서 뭔가 아쉽네요.<br>
+                                    <span style="color:#e67e22;">(${gameState.collectedEmotions.length}/${gameState.totalEmotions})</span>
+                                </div>
+                            </div>
+                            <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                                Press Enter to continue...
+                            </div>
+                        `
+                    }]);
+                }
+            }
+        }
+
+        // 이예지 안아주기 메시지
+        function showYejiHugMessage() {
+            addToMessageQueue([{
+                html: `
+                    <div class="msg-bubble npc-yeji" style="display:flex;align-items:flex-start;">
+                        <div class="npc-profile">
+                            <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23e74c3c'/><rect x='7' y='10' width='18' height='17' fill='%23fff6f3'/><rect x='11' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='18' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='14' y='24' width='4' height='2' fill='%23e8c4d7'/></svg>" alt="이예지 프로필">
+                        </div>
+                        <div>
+                            <div style="font-weight: bold; color: #e74c3c; font-size:15px;">이예지 (고등학교 친구)</div>
+                            <div style="background: rgba(231, 76, 60, 0.10); padding: 15px; border-radius: 7px; border-left: 4px solid #e74c3c; text-align: center; margin-top:6px;">
+                                <div style="font-size: 22px; margin-bottom: 6px;">🤗💕</div>
+                                <div style="font-weight: bold; color: #e74c3c;">"고생했어! 오늘도 출근 성공!"</div>
+                                <div style="margin-top: 7px; font-size: 14px;">*이예지가 따뜻하게 안아줍니다*</div>
+                            </div>
+                            <div style="font-size: 12px; color: #27ae60; margin-top: 13px; text-align: center;">
+                                🎉 축하합니다! 모든 딴생각을 수집하며 무사히 출근을 완료했습니다! 🎉
+                            </div>
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                        Press Enter to continue...
+                    </div>
+                `
+            }]);
+        }
+
+        // UI 업데이트 함수들
+        function updatePlayerPosition() {
+            const pos = document.getElementById('playerPos');
+            const currentTile = gameMap[gameState.player.y][gameState.player.x];
+            let location = '';
+            if (currentTile === 4) location = '지하철역 🚇';
+            else if (currentTile === 5) location = '횡단보도 🚦';
+            else if (currentTile === 3) location = '사무실 앞 🏢';
+            else if (gameState.player.y < 8) location = '사무실 근처 🏙️';
+            else if (gameState.player.y > 14) location = '지하철역 근처 🚉';
+            else location = '출근길 중간 🚶‍♂️';
+            pos.textContent = location;
+        }
+
+        function updateTime() {
+            const times = ['8:00 AM', '8:05 AM', '8:10 AM', '8:15 AM', '8:20 AM', '8:25 AM'];
+            const timeIndex = Math.min(gameState.collectedEmotions.length, times.length - 1);
+            gameState.currentTime = times[timeIndex];
+            document.getElementById('timeInfo').textContent = gameState.currentTime;
+        }
+
+        function updateEmotionList() {
+            const list = document.getElementById('emotionList');
+            if (gameState.collectedEmotions.length === 0) {
+                list.innerHTML = '<div style="color: #7f8c8d; font-size: 12px;">아직 딴생각이 없습니다</div>';
+            } else {
+                list.innerHTML = gameState.collectedEmotions.map(emotion =>
+                    `<div class="emotion-item">
+                        <div class="emotion-icon" style="background: ${emotion.color};">${emotion.icon}</div>
+                        <div>
+                            <div style="font-weight: 600;">${emotion.type}</div>
+                            <div style="font-size: 10px; color: #bdc3c7;">${emotion.desc}</div>
+                        </div>
+                    </div>`
+                ).join('');
+            }
+            document.getElementById('collectCount').textContent =
+                `${gameState.collectedEmotions.length}/${gameState.totalEmotions}`;
+        }
+        function updateProgress() {
+            const progress = (gameState.collectedEmotions.length / gameState.totalEmotions) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+
+        // 렌더링
+        function render() {
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < MAP_HEIGHT; y++) {
+                for (let x = 0; x < MAP_WIDTH; x++) {
+                    const tileX = x * TILE_SIZE;
+                    const tileY = y * TILE_SIZE;
+                    switch (gameMap[y][x]) {
+                        case 0:
+                            ctx.fillStyle = '#34495e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.strokeStyle = '#2c3e50';
+                            ctx.strokeRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            if ((x + y) % 3 === 0) {
+                                ctx.fillStyle = '#f39c12';
+                                ctx.fillRect(tileX + 8, tileY + 6, 6, 6);
+                                ctx.fillRect(tileX + 18, tileY + 6, 6, 6);
+                                ctx.fillRect(tileX + 8, tileY + 20, 6, 6);
+                                ctx.fillRect(tileX + 18, tileY + 20, 6, 6);
+                            }
+                            break;
+                        case 1:
+                            ctx.fillStyle = '#95a5a6';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.strokeStyle = '#7f8c8d';
+                            ctx.strokeRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            break;
+                        case 2:
+                            ctx.fillStyle = '#95a5a6';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            break;
+                        case 3:
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#fff';
+                            ctx.font = '16px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🏢', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 4:
+                            ctx.fillStyle = '#3498db';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#fff';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🚇', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 5:
+                            ctx.fillStyle = '#34495e';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#ecf0f1';
+                            for (let i = 0; i < 4; i++) {
+                                ctx.fillRect(tileX + i * 8, tileY, 4, TILE_SIZE);
+                            }
+                            break;
+                        case 6:
+                            ctx.fillStyle = '#95a5a6';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.font = '20px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🌳', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 7);
+                            break;
+                        case 7:
+                            ctx.fillStyle = '#8b4513';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#fff';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('☕', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 8:
+                            ctx.fillStyle = '#27ae60';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#fff';
+                            ctx.font = '14px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🏪', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 9:
+                            ctx.fillStyle = '#95a5a6';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#8b4513';
+                            ctx.fillRect(tileX + 4, tileY + 12, TILE_SIZE - 8, 8);
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🪑', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 3);
+                            break;
+                    }
+                }
+            }
+            gameState.emotions.forEach(emotion => {
+                if (!emotion.collected) {
+                    const x = emotion.x * TILE_SIZE;
+                    const y = emotion.y * TILE_SIZE;
+                    const time = Date.now() * 0.003;
+                    const bounce = Math.sin(time + emotion.x + emotion.y) * 3;
+                    const glow = Math.sin(time * 2 + emotion.x + emotion.y) * 0.3 + 0.7;
+                    ctx.save();
+                    ctx.globalAlpha = glow;
+                    ctx.fillStyle = emotion.color;
+                    ctx.fillRect(x + 2, y + 2 + bounce, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.globalAlpha = 1;
+                    ctx.strokeStyle = emotion.color;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(x + 2, y + 2 + bounce, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.font = '18px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(emotion.icon, x + TILE_SIZE/2, y + TILE_SIZE/2 + 5 + bounce);
+                    ctx.restore();
+                }
+            });
+            const playerX = gameState.player.x * TILE_SIZE;
+            const playerY = gameState.player.y * TILE_SIZE;
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(playerX + 2, playerY + 28, TILE_SIZE - 4, 4);
+            ctx.font = '24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillText(gameState.player.char, playerX + TILE_SIZE/2, playerY + TILE_SIZE/2 + 8);
+            const gradient = ctx.createRadialGradient(
+                playerX + TILE_SIZE/2, playerY + TILE_SIZE/2, 0,
+                playerX + TILE_SIZE/2, playerY + TILE_SIZE/2, TILE_SIZE * 2.5
+            );
+            gradient.addColorStop(0, 'rgba(52, 152, 219, 0.2)');
+            gradient.addColorStop(1, 'rgba(52, 152, 219, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(playerX - TILE_SIZE*1.5, playerY - TILE_SIZE*1.5, TILE_SIZE * 4, TILE_SIZE * 4);
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#ecf0f1';
+            ctx.textAlign = 'left';
+            ctx.fillText(`⏰ ${gameState.currentTime}`, 10, 30);
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#3498db';
+            ctx.fillText(`📍 현재 위치: ${document.getElementById('playerPos').textContent}`, 10, 55);
+        }
+
+        function gameLoop() {
+            if (!gameState.gameComplete) movePlayer();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 게임 초기화 및 시작
+        initEmotions();
+        updateEmotionList();
+        updateProgress();
+        updateTime();
+        // 시작 메시지 (시스템 말풍선)
+        addToMessageQueue([{
+            html: `
+                <div class="msg-bubble npc-system">
+                    <div style="font-weight: bold; color: #3498db;">SYSTEM</div>
+                    <div style="margin-top:8px;">딴생각 금지구역에 오신 것을 환영합니다!<br>
+                    지하철역에서 사무실까지 출근길을 걸으며<br>
+                    소중한 딴생각들을 수집해보세요 💭</div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 13px;">화살표 키로 이동, Enter로 메시지 넘기기</div>
+                </div>
+                <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                    Press Enter to start...
+                </div>
+            `
+        }]);
+        gameLoop();
+    </script>
+</body>
+</html>
