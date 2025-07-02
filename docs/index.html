@@ -562,9 +562,6 @@
                     // 메시지 큐 시작
                     addToMessageQueue(messages);
 
-                    // 딴생각 2개 수집 시 시욱이 이벤트 체크
-                    checkRyuEvent();
-
                     updateEmotionList();
                     updateProgress();
                     updateTime();
@@ -595,7 +592,7 @@
                                     </div>
                                 </div>
                                 <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
-                                    Press Enter to continue...
+                                    Press Space to continue...
                                 </div>
                             `
                         }
@@ -1056,6 +1053,9 @@
             setTimeout(() => {
                 messageBox.style.display = 'none';
                 isShowingMessage = false;
+                
+                // 스페이스바 전환 완료 후 시욱이 이벤트 체크
+                checkRyuEvent();
             }, 4000);
         }
 
