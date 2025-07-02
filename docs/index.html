@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>딴생각 금지구역: 출근길 탈출 RPG</title>
+    <title>킬링타임 게임 만들기</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -232,7 +232,10 @@
             inOffice: false,
             pcOn: false,
             messengerOpen: false,
-            chatWithSua: false
+            chatWithSua: false,
+            chaecheNPC: null,
+            ryuEventTriggered: false,
+            switchedToSpace: false
         };
 
         // 출근길 딴생각 타입 정의
@@ -324,7 +327,15 @@
 
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !gameState.switchedToSpace) {
+                if (isShowingMessage) {
+                    processNextMessage();
+                } else if (gameState.inOffice) {
+                    checkPCInteraction();
+                }
+            }
+            if (e.key === ' ' && gameState.switchedToSpace) {
+                e.preventDefault(); // 스페이스바 기본 동작 방지
                 if (isShowingMessage) {
                     processNextMessage();
                 } else if (gameState.inOffice) {
@@ -362,7 +373,14 @@
         // 큐에 있는 메시지 표시
         function showQueuedMessage(messageData) {
             const messageBox = document.getElementById('messageBox');
-            messageBox.innerHTML = messageData.html;
+            let html = messageData.html;
+            
+            // 스페이스바로 전환된 후에는 "Press Enter"를 "Press Space"로 변경
+            if (gameState.switchedToSpace) {
+                html = html.replace(/Press Enter to continue\.\.\./g, 'Press Space to continue...');
+            }
+            
+            messageBox.innerHTML = html;
             messageBox.style.display = 'block';
             isShowingMessage = true;
         }
@@ -448,6 +466,32 @@
                             `
                         });
 
+                        // 효진이 메타 메시지 (스페이스바로 전환 요청)
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="효진 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
+                                        <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[지금]</div>
+                                            <div style="color: #1976d2;">자꾸 엔터ㄴ 눌러야 하는걸 스페이스 바를 누르게돼 ㅡㅡ 바꿔줄 수 있니?</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `,
+                            callback: () => {
+                                // 스페이스바로 전환
+                                gameState.switchedToSpace = true;
+                                showSystemMessage();
+                            }
+                        });
+
                         // 2. ‘여행갈때 친구 3명 무리 특’ 릴스 소개 (썸네일+애니 효과)
                         messages.push({
                             html: `
@@ -479,7 +523,34 @@
                                 </div>
                             `
                         });
+
+                        // 효진이 메타 메시지 (스페이스바로 전환 요청)
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="효진 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
+                                        <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[지금]</div>
+                                            <div style="color: #1976d2;">자꾸 엔터ㄴ 눌러야 하는걸 스페이스 바를 누르게돼 ㅡㅡ 바꿔줄 수 있니?</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `,
+                            callback: () => {
+                                // 스페이스바로 전환
+                                gameState.switchedToSpace = true;
+                                showSystemMessage();
+                            }
+                        });
                     }
+
 
                     // 이예지 불평 메시지 (한 번만 표시)
                     if (!gameState.yejiComplaintShown) {
@@ -518,16 +589,13 @@
                                 html: `
                                     <div class="msg-bubble npc-ryu" style="display:flex;align-items:flex-start;">
                                         <div class="npc-profile">
-                                            <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23f8c471'/><rect x='7' y='9' width='18' height='18' fill='%23fffbe6'/><rect x='11' y='15' width='3' height='3' fill='%23dba84e'/><rect x='18' y='15' width='3' height='3' fill='%23dba84e'/><rect x='14' y='23' width='4' height='2' fill='%23ffe1a3'/></svg>" alt="류시욱 프로필">
+                                            <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%2334495e'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%232c3e50'/><rect x='18' y='14' width='3' height='3' fill='%232c3e50'/><rect x='13' y='21' width='6' height='2' fill='%23e67e22'/></svg>" alt="류시욱 프로필">
                                         </div>
                                         <div>
-                                            <div style="font-weight: bold; color: #f8c471; font-size:15px;">류시욱</div>
-                                            <div style="font-size: 13px; color: #eee; margin-top: 4px; line-height:1.6;">
-                                                [우기 🎀🤍🍬🐻] [오후 4:07] 아 한칸씩<br>
-                                                [우기 🎀🤍🍬🐻] [오후 4:07] 안움지깅고<br>
-                                                [우기 🎀🤍🍬🐻] [오후 4:07] 졸라 예민하게 움직여서<br>
-                                                [우기 🎀🤍🍬🐻] [오후 4:07] 답답ㅎ래요<br>
-                                                [우기 🎀🤍🍬🐻] [오후 4:07] 썅
+                                            <div style="font-weight: bold; color: #34495e; font-size:15px;">류시욱</div>
+                                            <div style="margin-top:4px; background: rgba(52, 73, 94, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #34495e;">
+                                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오후 12:30]</div>
+                                                <div style="color: #2c3e50;">점심 뭐먹지? 같이 먹을사람?</div>
                                             </div>
                                         </div>
                                     </div>
@@ -645,7 +713,7 @@
                         <div class="msg-bubble npc-system">
                             <div style="font-weight: bold; color: #95a5a6;">SYSTEM</div>
                             <div style="margin-top:7px;">
-                                💻 내 자리로 가서 PC를 사용하세요!<br>
+                                💻 내 자리로 가서 스페이스바를 눌러 PC를 사용하세요!<br>
                                 (💻 아이콘이 있는 책상을 찾아보세요)
                             </div>
                         </div>
@@ -674,7 +742,7 @@
                                     Ready!
                                 </div>
                             </div>
-                            엔터를 다시 눌러 메신저를 실행하세요!
+                            스페이스바를 다시 눌러 메신저를 실행하세요!
                         </div>
                     </div>
                     <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
@@ -803,23 +871,32 @@
         // 김채채 NPC 이벤트
         function startChaecheEvent() {
             // 플레이어 움직임 일시 정지
-            const originalMovePlayer = window.movePlayerEnabled;
             window.movePlayerEnabled = false;
             
+            // 김채채 NPC 등장 (화면 오른쪽에서 등장)
+            gameState.chaecheNPC = {
+                x: 24,
+                y: 11,
+                targetX: 15,
+                char: '👩‍💼',
+                moving: true
+            };
+            
+            // NPC 이동 애니메이션
+            const moveInterval = setInterval(() => {
+                if (gameState.chaecheNPC.x > gameState.chaecheNPC.targetX) {
+                    gameState.chaecheNPC.x--;
+                } else {
+                    clearInterval(moveInterval);
+                    gameState.chaecheNPC.moving = false;
+                    startChaecheMessages();
+                }
+            }, 200);
+        }
+
+        // 김채채 메시지 시작
+        function startChaecheMessages() {
             addToMessageQueue([
-                {
-                    html: `
-                        <div class="msg-bubble npc-system">
-                            <div style="font-weight: bold; color: #3498db;">SYSTEM</div>
-                            <div style="margin-top:7px;">
-                                👀 누군가 다가오고 있습니다...
-                            </div>
-                        </div>
-                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
-                            Press Enter to continue...
-                        </div>
-                    `
-                },
                 {
                     html: `
                         <div class="msg-bubble npc-chaeche" style="display:flex;align-items:flex-start;">
@@ -929,11 +1006,82 @@
                         </div>
                     `,
                     callback: () => {
-                        // 플레이어 움직임 재개
-                        window.movePlayerEnabled = true;
+                        // 김채채 퇴장 애니메이션
+                        if (gameState.chaecheNPC) {
+                            gameState.chaecheNPC.moving = true;
+                            const exitInterval = setInterval(() => {
+                                gameState.chaecheNPC.x++;
+                                if (gameState.chaecheNPC.x > 25) {
+                                    clearInterval(exitInterval);
+                                    gameState.chaecheNPC = null;
+                                    // 플레이어 움직임 재개
+                                    window.movePlayerEnabled = true;
+                                }
+                            }, 200);
+                        } else {
+                            window.movePlayerEnabled = true;
+                        }
                     }
                 }
             ]);
+        }
+
+        // 시스템 수정 완료 메시지 표시
+        function showSystemMessage() {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.innerHTML = `
+                <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                            background: linear-gradient(45deg, #2ecc71, #27ae60); color: white; 
+                            padding: 30px 40px; border-radius: 15px; 
+                            font-size: 24px; font-weight: bold; text-align: center; z-index: 1000;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 3px solid #fff;">
+                    ✅ OK 수정 완료! ✅<br>
+                    <div style="font-size: 16px; margin-top: 10px; opacity: 0.9;">
+                        이제 스페이스바로 진행합니다
+                    </div>
+                </div>
+            `;
+            messageBox.style.display = 'block';
+            
+            // 모든 기존 메시지를 스페이스바로 변경
+            updateAllMessagesToSpace();
+            
+            // 4초 후 자동으로 사라짐
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+                isShowingMessage = false;
+            }, 4000);
+        }
+
+        // 모든 메시지를 스페이스바로 변경
+        function updateAllMessagesToSpace() {
+            // 이후 모든 메시지에서 "Press Enter"를 "Press Space"로 변경하는 함수
+            // 실제로는 gameState.switchedToSpace 플래그로 제어됨
+        }
+
+        // 스페이스바 안내 메시지 표시
+        let interactionMessageShown = false;
+        function showPCInteractionMessage(message) {
+            if (!interactionMessageShown && !isShowingMessage) {
+                const messageBox = document.getElementById('messageBox');
+                messageBox.innerHTML = `
+                    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; 
+                                font-size: 18px; font-weight: bold; text-align: center; z-index: 1000;">
+                        ${message}
+                    </div>
+                `;
+                messageBox.style.display = 'block';
+                interactionMessageShown = true;
+                
+                // 3초 후 자동으로 사라짐
+                setTimeout(() => {
+                    if (!isShowingMessage) {
+                        messageBox.style.display = 'none';
+                        interactionMessageShown = false;
+                    }
+                }, 3000);
+            }
         }
 
         // UI 업데이트 함수들
@@ -944,9 +1092,11 @@
                 let location = '';
                 if (currentTile === 11) {
                     if (!gameState.pcOn) {
-                        location = '내 자리 💻 (엔터: PC 켜기)';
+                        location = '내 자리 💻';
+                        showPCInteractionMessage('스페이스바를 클릭해서 PC를 켜세요!');
                     } else if (!gameState.messengerOpen) {
-                        location = '내 자리 💻 (엔터: 메신저 열기)';
+                        location = '내 자리 💻';
+                        showPCInteractionMessage('스페이스바를 클릭해서 메신저를 열어주세요!');
                     } else {
                         location = '내 자리 💻';
                     }
@@ -1170,6 +1320,22 @@
             ctx.textAlign = 'center';
             ctx.fillStyle = '#2c3e50';
             ctx.fillText(gameState.player.char, playerX + TILE_SIZE/2, playerY + TILE_SIZE/2 + 8);
+            
+            // 김채채 NPC 렌더링
+            if (gameState.chaecheNPC) {
+                const npcX = gameState.chaecheNPC.x * TILE_SIZE;
+                const npcY = gameState.chaecheNPC.y * TILE_SIZE;
+                
+                // NPC 그림자
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(npcX + 2, npcY + 28, TILE_SIZE - 4, 4);
+                
+                // NPC 캐릭터
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#ff6b9d';
+                ctx.fillText(gameState.chaecheNPC.char, npcX + TILE_SIZE/2, npcY + TILE_SIZE/2 + 8);
+            }
             const gradient = ctx.createRadialGradient(
                 playerX + TILE_SIZE/2, playerY + TILE_SIZE/2, 0,
                 playerX + TILE_SIZE/2, playerY + TILE_SIZE/2, TILE_SIZE * 2.5
