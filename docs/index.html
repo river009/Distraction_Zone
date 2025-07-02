@@ -244,6 +244,15 @@
             { type: '퇴근 기대', icon: '🏠', color: '#27ae60', desc: '퇴근하면 뭐하지? 집에 가고 싶다' }
         ];
 
+        // 회사 딴생각 타입 정의
+        const officeEmotionTypes = [
+            { type: '회의 걱정', icon: '😰', color: '#e74c3c', desc: '오늘 회의에서 뭐라고 말하지?' },
+            { type: '업무 스트레스', icon: '😤', color: '#9b59b6', desc: '일이 너무 많아... 언제 끝나지?' },
+            { type: '동료 관찰', icon: '👀', color: '#f39c12', desc: '저 사람은 뭐하고 있을까?' },
+            { type: '간식 생각', icon: '🍪', color: '#e67e22', desc: '서랍에 과자가 있었나?' },
+            { type: '집 생각', icon: '🏡', color: '#2ecc71', desc: '집에서 넷플릭스 보고 싶다...' }
+        ];
+
         // 회사 맵 (10: 책상, 11: 내 자리, 12: 복사기, 13: 화장실, 14: 회의실)
         const officeMap = [
             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -375,8 +384,8 @@
                     gameState.player.x = newX;
                     gameState.player.y = newY;
                     updatePlayerPosition();
+                    checkEmotionCollection();
                     if (!gameState.inOffice) {
-                        checkEmotionCollection();
                         checkOfficeReached();
                     }
                 }
@@ -454,7 +463,7 @@
                                                     여행갈때 친구 3명 무리 특
                                                 </span>
                                             </div>
-                                            <img src="https://images.unsplash.com/photo-1464983953574-0892a716854b?fit=crop&w=400&q=80"
+                                            <img src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?fit=crop&w=400&q=80"
                                                 style="width:100%; border-radius:10px; margin:5px 0 8px 0; box-shadow:0 2px 16px #0005; aspect-ratio:4/3; object-fit:cover; animation: pulseThumb 1.2s infinite alternate;">
                                             <div style="margin-top: 6px; font-size:13px; color:#ffe;">
                                                 #여행스타그램 #친구무리 #웃긴영상
@@ -613,6 +622,7 @@
                         gameState.inOffice = true;
                         gameState.player.x = 12;
                         gameState.player.y = 16;
+                        initOfficeEmotions();
                         document.getElementById('playerPos').textContent = '회사 로비 🏢';
                     }
                 }
@@ -764,6 +774,32 @@
             ]);
         }
 
+        // 회사 감정 초기화
+        function initOfficeEmotions() {
+            // 회사에서 수집할 수 있는 감정들 추가
+            const officeEmotionPositions = [
+                {x: 5, y: 5}, {x: 15, y: 8}, {x: 8, y: 11}, 
+                {x: 20, y: 6}, {x: 12, y: 4}
+            ];
+            
+            officeEmotionPositions.forEach((pos, index) => {
+                if (index < officeEmotionTypes.length) {
+                    const emotion = {
+                        ...officeEmotionTypes[index],
+                        x: pos.x,
+                        y: pos.y,
+                        collected: false
+                    };
+                    gameState.emotions.push(emotion);
+                }
+            });
+            
+            // 총 감정 수 업데이트
+            gameState.totalEmotions = gameState.emotions.length;
+            updateEmotionList();
+            updateProgress();
+        }
+
         // 김채채 NPC 이벤트
         function startChaecheEvent() {
             // 플레이어 움직임 일시 정지
@@ -906,7 +942,15 @@
             if (gameState.inOffice) {
                 const currentTile = officeMap[gameState.player.y][gameState.player.x];
                 let location = '';
-                if (currentTile === 11) location = '내 자리 💻';
+                if (currentTile === 11) {
+                    if (!gameState.pcOn) {
+                        location = '내 자리 💻 (엔터: PC 켜기)';
+                    } else if (!gameState.messengerOpen) {
+                        location = '내 자리 💻 (엔터: 메신저 열기)';
+                    } else {
+                        location = '내 자리 💻';
+                    }
+                }
                 else if (currentTile === 10) location = '회사 책상 📋';
                 else if (currentTile === 12) location = '복사기 🖨️';
                 else if (currentTile === 13) location = '화장실 🚻';
