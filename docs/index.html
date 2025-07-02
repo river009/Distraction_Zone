@@ -227,7 +227,12 @@
             gameComplete: false,
             currentTime: '8:00 AM',
             messageQueue: [],
-            currentMessageIndex: 0
+            currentMessageIndex: 0,
+            yejiComplaintShown: false,
+            inOffice: false,
+            pcOn: false,
+            messengerOpen: false,
+            chatWithSua: false
         };
 
         // 출근길 딴생각 타입 정의
@@ -237,6 +242,29 @@
             { type: '휴대폰 확인', icon: '📱', color: '#3498db', desc: '메시지 왔나? SNS 좀 봐야지' },
             { type: '점심 메뉴', icon: '🍚', color: '#e67e22', desc: '오늘 점심은 뭘 먹을까?' },
             { type: '퇴근 기대', icon: '🏠', color: '#27ae60', desc: '퇴근하면 뭐하지? 집에 가고 싶다' }
+        ];
+
+        // 회사 맵 (10: 책상, 11: 내 자리, 12: 복사기, 13: 화장실, 14: 회의실)
+        const officeMap = [
+            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,12,1,1,1,1,1,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,1,1,14,14,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,1,1,14,14,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,1,1,1,1,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,11,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,13,1,1,1,1,0],
+            [0,1,10,10,1,10,10,1,10,10,1,10,10,1,10,10,1,1,1,13,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+            [0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0]
         ];
 
         // 예쁜 출근길 맵 (6: 나무, 7: 카페, 8: 편의점, 9: 벤치)
@@ -283,17 +311,28 @@
         // 키보드 입력 처리
         const keys = {};
         let isShowingMessage = false;
+        window.movePlayerEnabled = true;
 
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            if (e.key === 'Enter' && isShowingMessage) {
-                processNextMessage();
+            if (e.key === 'Enter') {
+                if (isShowingMessage) {
+                    processNextMessage();
+                } else if (gameState.inOffice) {
+                    checkPCInteraction();
+                }
             }
         });
         document.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
         // 메시지 큐 처리
         function processNextMessage() {
+            // 현재 메시지의 callback 실행
+            const currentMessage = gameState.messageQueue[gameState.currentMessageIndex];
+            if (currentMessage && currentMessage.callback) {
+                currentMessage.callback();
+            }
+            
             gameState.currentMessageIndex++;
             if (gameState.currentMessageIndex < gameState.messageQueue.length) {
                 showQueuedMessage(gameState.messageQueue[gameState.currentMessageIndex]);
@@ -322,6 +361,7 @@
         // 플레이어 이동
         function movePlayer() {
             if (isShowingMessage) return;
+            if (window.movePlayerEnabled === false) return;
             let newX = gameState.player.x;
             let newY = gameState.player.y;
             if (keys['ArrowUp'] || keys['w']) newY--;
@@ -329,13 +369,16 @@
             if (keys['ArrowLeft'] || keys['a']) newX--;
             if (keys['ArrowRight'] || keys['d']) newX++;
             if (newX >= 0 && newX < MAP_WIDTH && newY >= 0 && newY < MAP_HEIGHT) {
-                const targetTile = gameMap[newY][newX];
+                const currentMap = gameState.inOffice ? officeMap : gameMap;
+                const targetTile = currentMap[newY][newX];
                 if (targetTile !== 0) {
                     gameState.player.x = newX;
                     gameState.player.y = newY;
                     updatePlayerPosition();
-                    checkEmotionCollection();
-                    checkOfficeReached();
+                    if (!gameState.inOffice) {
+                        checkEmotionCollection();
+                        checkOfficeReached();
+                    }
                 }
             }
         }
@@ -383,7 +426,7 @@
                                         <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="우기 프로필">
                                     </div>
                                     <div>
-                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기</div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
                                         <div style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); padding: 12px; border-radius: 10px; color: white; margin-top:7px;">
                                             <span style="font-weight:500;">Instagram</span><br>
                                             <span style="background:rgba(255,255,255,0.15); padding:7px 10px; border-radius:7px; display:inline-block; margin-top:8px;">📹 <strong>hxojxx님</strong>이 릴스를 보냈습니다!</span>
@@ -404,7 +447,7 @@
                                         <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="효진 프로필">
                                     </div>
                                     <div>
-                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기</div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
                                         <div style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); padding: 13px; border-radius: 14px; color: white; margin-top:8px; box-shadow:0 6px 32px rgba(0,0,0,0.23);">
                                             <div style="font-size:15px; font-weight:bold; margin-bottom:7px; line-height:1.3;">
                                                 <span style="background:rgba(0,0,0,0.11); padding:5px 12px; border-radius:9px; font-weight:700; font-size:16px;">
@@ -429,28 +472,31 @@
                         });
                     }
 
-                    // 이예지 불평 메시지
-                    messages.push({
-                        html: `
-                            <div class="msg-bubble npc-yeji" style="display:flex;align-items:flex-start;">
-                                <div class="npc-profile">
-                                    <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23e74c3c'/><rect x='7' y='10' width='18' height='17' fill='%23fff6f3'/><rect x='11' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='18' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='14' y='24' width='4' height='2' fill='%23e8c4d7'/></svg>" alt="이예지 프로필">
-                                </div>
-                                <div>
-                                    <div style="font-weight: bold; color: #e74c3c; font-size:15px;">이예지 (고등학교 친구)</div>
-                                    <div style="margin-top:4px; background: rgba(231, 76, 60, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #e74c3c;">
-                                        "야! 저기서 방향키 한번 누르면 저기로 가지는데 어케 먹으라는 거죠? 개발자 누고? 😤"
+                    // 이예지 불평 메시지 (한 번만 표시)
+                    if (!gameState.yejiComplaintShown) {
+                        gameState.yejiComplaintShown = true;
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-yeji" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23e74c3c'/><rect x='7' y='10' width='18' height='17' fill='%23fff6f3'/><rect x='11' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='18' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='14' y='24' width='4' height='2' fill='%23e8c4d7'/></svg>" alt="이예지 프로필">
                                     </div>
-                                    <div style="font-size: 11px; color: #7f8c8d; margin-top: 7px;">
-                                        * 고등학교 때부터 봐온 친구 이예지가 게임 조작에 대해 불만을 표했습니다
+                                    <div>
+                                        <div style="font-weight: bold; color: #e74c3c; font-size:15px;">이예지 (고등학교 친구)</div>
+                                        <div style="margin-top:4px; background: rgba(231, 76, 60, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                                            "야! 저기서 방향키 한번 누르면 저기로 가지는데 어케 먹으라는 거죠? 개발자 누고? 😤"
+                                        </div>
+                                        <div style="font-size: 11px; color: #7f8c8d; margin-top: 7px;">
+                                            * 고등학교 때부터 봐온 친구 이예지가 게임 조작에 대해 불만을 표했습니다 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
-                                Press Enter to continue...
-                            </div>
-                        `
-                    });
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+                    }
 
                     // 메시지 큐 시작
                     addToMessageQueue(messages);
@@ -504,13 +550,20 @@
                                 <div style="font-weight: bold; color: #e67e22;">SYSTEM</div>
                                 <div style="margin-top:7px;">
                                     🏢 사무실에 도착했지만... 딴생각이 부족해서 뭔가 아쉽네요.<br>
-                                    <span style="color:#e67e22;">(${gameState.collectedEmotions.length}/${gameState.totalEmotions})</span>
+                                    <span style="color:#e67e22;">(${gameState.collectedEmotions.length}/${gameState.totalEmotions})</span><br><br>
+                                    😅 다시 출근길로 돌아가서 딴생각을 더 모아보세요!
                                 </div>
                             </div>
                             <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
                                 Press Enter to continue...
                             </div>
-                        `
+                        `,
+                        callback: () => {
+                            // 플레이어를 다시 출근길 시작점으로 이동
+                            gameState.player.x = 12;
+                            gameState.player.y = 17;
+                            updatePlayerPosition();
+                        }
                     }]);
                 }
             }
@@ -518,22 +571,100 @@
 
         // 이예지 안아주기 메시지
         function showYejiHugMessage() {
+            addToMessageQueue([
+                {
+                    html: `
+                        <div class="msg-bubble npc-yeji" style="display:flex;align-items:flex-start;">
+                            <div class="npc-profile">
+                                <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23e74c3c'/><rect x='7' y='10' width='18' height='17' fill='%23fff6f3'/><rect x='11' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='18' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='14' y='24' width='4' height='2' fill='%23e8c4d7'/></svg>" alt="이예지 프로필">
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #e74c3c; font-size:15px;">김현진</div>
+                                <div style="background: rgba(231, 76, 60, 0.10); padding: 15px; border-radius: 7px; border-left: 4px solid #e74c3c; text-align: center; margin-top:6px;">
+                                    <div style="font-size: 22px; margin-bottom: 6px;">🤗💕</div>
+                                    <div style="font-weight: bold; color: #e74c3c;">"고생했어! 오늘도 출근 성공!"</div>
+                                    <div style="margin-top: 7px; font-size: 14px;">*김현진이 따뜻하게 안아줍니다*</div>
+                                </div>
+                                <div style="font-size: 12px; color: #27ae60; margin-top: 13px; text-align: center;">
+                                    🎉 축하합니다! 모든 딴생각을 수집하며 무사히 출근을 완료했습니다! 🎉
+                                </div>
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                        Press Enter to continue...
+                    </div>
+                `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-system">
+                            <div style="font-weight: bold; color: #3498db;">SYSTEM</div>
+                            <div style="margin-top:7px;">
+                                🏢 이제 회사 내부로 들어갑니다...<br>
+                                자리에 앉아서 하루를 시작해보세요!
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `,
+                    callback: () => {
+                        // 회사로 이동 (회사 맵의 입구인 1번 타일로)
+                        gameState.inOffice = true;
+                        gameState.player.x = 12;
+                        gameState.player.y = 16;
+                        document.getElementById('playerPos').textContent = '회사 로비 🏢';
+                    }
+                }
+            ]);
+        }
+
+        // PC 인터랙션 체크
+        function checkPCInteraction() {
+            if (gameState.inOffice && 
+                officeMap[gameState.player.y][gameState.player.x] === 11) {
+                if (!gameState.pcOn) {
+                    turnOnPC();
+                } else if (!gameState.messengerOpen) {
+                    openMessenger();
+                }
+            } else if (gameState.inOffice) {
+                // 내 자리가 아닌 곳에서 엔터를 눌렀을 때
+                addToMessageQueue([{
+                    html: `
+                        <div class="msg-bubble npc-system">
+                            <div style="font-weight: bold; color: #95a5a6;">SYSTEM</div>
+                            <div style="margin-top:7px;">
+                                💻 내 자리로 가서 PC를 사용하세요!<br>
+                                (💻 아이콘이 있는 책상을 찾아보세요)
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                }]);
+            }
+        }
+
+        // PC 켜기
+        function turnOnPC() {
+            gameState.pcOn = true;
             addToMessageQueue([{
                 html: `
-                    <div class="msg-bubble npc-yeji" style="display:flex;align-items:flex-start;">
-                        <div class="npc-profile">
-                            <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23e74c3c'/><rect x='7' y='10' width='18' height='17' fill='%23fff6f3'/><rect x='11' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='18' y='16' width='3' height='3' fill='%23c73a3a'/><rect x='14' y='24' width='4' height='2' fill='%23e8c4d7'/></svg>" alt="이예지 프로필">
-                        </div>
-                        <div>
-                            <div style="font-weight: bold; color: #e74c3c; font-size:15px;">이예지 (고등학교 친구)</div>
-                            <div style="background: rgba(231, 76, 60, 0.10); padding: 15px; border-radius: 7px; border-left: 4px solid #e74c3c; text-align: center; margin-top:6px;">
-                                <div style="font-size: 22px; margin-bottom: 6px;">🤗💕</div>
-                                <div style="font-weight: bold; color: #e74c3c;">"고생했어! 오늘도 출근 성공!"</div>
-                                <div style="margin-top: 7px; font-size: 14px;">*이예지가 따뜻하게 안아줍니다*</div>
+                    <div class="msg-bubble npc-system">
+                        <div style="font-weight: bold; color: #3498db;">SYSTEM</div>
+                        <div style="margin-top:7px;">
+                            💻 PC가 부팅중입니다...<br>
+                            <div style="margin-top: 10px; text-align: center;">
+                                <div style="font-family: monospace; color: #00ff00; background: #000; padding: 10px; border-radius: 4px;">
+                                    Windows Starting...<br>
+                                    Loading system files...<br>
+                                    █████████████ 100%<br>
+                                    Ready!
+                                </div>
                             </div>
-                            <div style="font-size: 12px; color: #27ae60; margin-top: 13px; text-align: center;">
-                                🎉 축하합니다! 모든 딴생각을 수집하며 무사히 출근을 완료했습니다! 🎉
-                            </div>
+                            엔터를 다시 눌러 메신저를 실행하세요!
                         </div>
                     </div>
                     <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
@@ -543,18 +674,256 @@
             }]);
         }
 
+        // 메신저 열기
+        function openMessenger() {
+            gameState.messengerOpen = true;
+            addToMessageQueue([{
+                html: `
+                    <div class="msg-bubble npc-system">
+                        <div style="font-weight: bold; color: #3498db;">SYSTEM</div>
+                        <div style="margin-top:7px;">
+                            💬 메신저를 실행합니다...<br>
+                            새로운 메시지가 도착했습니다!
+                        </div>
+                    </div>
+                    <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                        Press Enter to continue...
+                    </div>
+                `,
+                callback: () => {
+                    startChatWithSua();
+                }
+            }]);
+        }
+
+        // 박수아와의 채팅 시작
+        function startChatWithSua() {
+            gameState.chatWithSua = true;
+            addToMessageQueue([
+                {
+                    html: `
+                        <div style="background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 10px; padding: 15px; font-family: 'Arial', sans-serif;">
+                            <div style="background: #007bff; color: white; padding: 8px; border-radius: 8px 8px 0 0; margin: -15px -15px 10px -15px; font-weight: bold;">
+                                📱 메신저 - 박수아
+                            </div>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 15px 15px 15px 5px; margin-bottom: 8px; position: relative;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">박수아 [오후 4:16]</div>
+                                <div style="color: #1976d2; font-weight: bold;">쪼아잉</div>
+                            </div>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 15px 15px 15px 5px; margin-bottom: 8px;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">박수아 [오후 4:16]</div>
+                                <div style="color: #1976d2;">할일 거의 다 끇난는데</div>
+                            </div>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 15px 15px 15px 5px; margin-bottom: 15px;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">박수아 [오후 4:16]</div>
+                                <div style="color: #1976d2;">너모졸려</div>
+                            </div>
+                            <div style="text-align: center; font-size: 12px; color: #666;">
+                                답장하려면 Enter를 누르세요
+                            </div>
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div style="background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 10px; padding: 15px; font-family: 'Arial', sans-serif;">
+                            <div style="background: #007bff; color: white; padding: 8px; border-radius: 8px 8px 0 0; margin: -15px -15px 10px -15px; font-weight: bold;">
+                                📱 메신저 - 박수아
+                            </div>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 15px 15px 15px 5px; margin-bottom: 8px;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">박수아 [오후 4:16]</div>
+                                <div style="color: #1976d2; font-weight: bold;">쪼아잉</div>
+                            </div>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 15px 15px 15px 5px; margin-bottom: 8px;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">박수아 [오후 4:16]</div>
+                                <div style="color: #1976d2;">할일 거의 다 끇난는데</div>
+                            </div>
+                            <div style="background: #e3f2fd; padding: 12px; border-radius: 15px 15px 15px 5px; margin-bottom: 8px;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">박수아 [오후 4:16]</div>
+                                <div style="color: #1976d2;">너모졸려</div>
+                            </div>
+                            <div style="background: #dcf8c6; padding: 12px; border-radius: 15px 15px 5px 15px; margin-left: 40px; margin-bottom: 15px;">
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px; text-align: right;">나 [오후 4:17]</div>
+                                <div style="color: #2e7d32;">자면 안돼..(자)</div>
+                            </div>
+                            <div style="text-align: center; font-size: 12px; color: #666;">
+                                답장을 보냈습니다!
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `,
+                    callback: () => {
+                        // 박수아와의 채팅 완료 후 김채채 등장
+                        setTimeout(() => {
+                            startChaecheEvent();
+                        }, 1000);
+                    }
+                }
+            ]);
+        }
+
+        // 김채채 NPC 이벤트
+        function startChaecheEvent() {
+            // 플레이어 움직임 일시 정지
+            const originalMovePlayer = window.movePlayerEnabled;
+            window.movePlayerEnabled = false;
+            
+            addToMessageQueue([
+                {
+                    html: `
+                        <div class="msg-bubble npc-system">
+                            <div style="font-weight: bold; color: #3498db;">SYSTEM</div>
+                            <div style="margin-top:7px;">
+                                👀 누군가 다가오고 있습니다...
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-chaeche" style="display:flex;align-items:flex-start;">
+                            <div class="npc-profile">
+                                <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23ff6b9d'/><rect x='7' y='10' width='18' height='17' fill='%23fff'/><rect x='11' y='16' width='3' height='3' fill='%23ff1744'/><rect x='18' y='16' width='3' height='3' fill='%23ff1744'/><rect x='14' y='22' width='4' height='2' fill='%23ff8a65'/></svg>" alt="김채채 프로필">
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #ff6b9d; font-size:15px;">채린언니 (김채채)</div>
+                                <div style="margin-top:4px; background: rgba(255, 107, 157, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #ff6b9d;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오전 10:40]</div>
+                                    <div style="color: #ff1744;">아</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-chaeche" style="display:flex;align-items:flex-start;">
+                            <div class="npc-profile">
+                                <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23ff6b9d'/><rect x='7' y='10' width='18' height='17' fill='%23fff'/><rect x='11' y='16' width='3' height='3' fill='%23ff1744'/><rect x='18' y='16' width='3' height='3' fill='%23ff1744'/><rect x='14' y='22' width='4' height='2' fill='%23ff8a65'/></svg>" alt="김채채 프로필">
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #ff6b9d; font-size:15px;">채린언니 (김채채)</div>
+                                <div style="margin-top:4px; background: rgba(255, 107, 157, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #ff6b9d;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오전 10:40]</div>
+                                    <div style="color: #ff1744;">술</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-chaeche" style="display:flex;align-items:flex-start;">
+                            <div class="npc-profile">
+                                <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23ff6b9d'/><rect x='7' y='10' width='18' height='17' fill='%23fff'/><rect x='11' y='16' width='3' height='3' fill='%23ff1744'/><rect x='18' y='16' width='3' height='3' fill='%23ff1744'/><rect x='14' y='22' width='4' height='2' fill='%23ff8a65'/></svg>" alt="김채채 프로필">
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #ff6b9d; font-size:15px;">채린언니 (김채채)</div>
+                                <div style="margin-top:4px; background: rgba(255, 107, 157, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #ff6b9d;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오전 10:40]</div>
+                                    <div style="color: #ff1744;">졸라안깨네 ㅋㅋㅋ</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-chaeche" style="display:flex;align-items:flex-start;">
+                            <div class="npc-profile">
+                                <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23ff6b9d'/><rect x='7' y='10' width='18' height='17' fill='%23fff'/><rect x='11' y='16' width='3' height='3' fill='%23ff1744'/><rect x='18' y='16' width='3' height='3' fill='%23ff1744'/><rect x='14' y='22' width='4' height='2' fill='%23ff8a65'/></svg>" alt="김채채 프로필">
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #ff6b9d; font-size:15px;">채린언니 (김채채)</div>
+                                <div style="margin-top:4px; background: rgba(255, 107, 157, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #ff6b9d;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오전 10:40]</div>
+                                    <div style="color: #ff1744;">아 ㅋㅋ ㅋ ㅋㅋ</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-chaeche" style="display:flex;align-items:flex-start;">
+                            <div class="npc-profile">
+                                <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23ff6b9d'/><rect x='7' y='10' width='18' height='17' fill='%23fff'/><rect x='11' y='16' width='3' height='3' fill='%23ff1744'/><rect x='18' y='16' width='3' height='3' fill='%23ff1744'/><rect x='14' y='22' width='4' height='2' fill='%23ff8a65'/></svg>" alt="김채채 프로필">
+                            </div>
+                            <div>
+                                <div style="font-weight: bold; color: #ff6b9d; font-size:15px;">채린언니 (김채채)</div>
+                                <div style="margin-top:4px; background: rgba(255, 107, 157, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #ff6b9d;">
+                                    <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오전 10:40]</div>
+                                    <div style="color: #ff1744;">디질거같아아직도</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `
+                },
+                {
+                    html: `
+                        <div class="msg-bubble npc-system">
+                            <div style="font-weight: bold; color: #95a5a6;">SYSTEM</div>
+                            <div style="margin-top:7px;">
+                                👋 김채채가 퇴장했습니다...<br>
+                                이제 다시 움직일 수 있습니다!
+                            </div>
+                        </div>
+                        <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
+                            Press Enter to continue...
+                        </div>
+                    `,
+                    callback: () => {
+                        // 플레이어 움직임 재개
+                        window.movePlayerEnabled = true;
+                    }
+                }
+            ]);
+        }
+
         // UI 업데이트 함수들
         function updatePlayerPosition() {
             const pos = document.getElementById('playerPos');
-            const currentTile = gameMap[gameState.player.y][gameState.player.x];
-            let location = '';
-            if (currentTile === 4) location = '지하철역 🚇';
-            else if (currentTile === 5) location = '횡단보도 🚦';
-            else if (currentTile === 3) location = '사무실 앞 🏢';
-            else if (gameState.player.y < 8) location = '사무실 근처 🏙️';
-            else if (gameState.player.y > 14) location = '지하철역 근처 🚉';
-            else location = '출근길 중간 🚶‍♂️';
-            pos.textContent = location;
+            if (gameState.inOffice) {
+                const currentTile = officeMap[gameState.player.y][gameState.player.x];
+                let location = '';
+                if (currentTile === 11) location = '내 자리 💻';
+                else if (currentTile === 10) location = '회사 책상 📋';
+                else if (currentTile === 12) location = '복사기 🖨️';
+                else if (currentTile === 13) location = '화장실 🚻';
+                else if (currentTile === 14) location = '회의실 🏢';
+                else location = '회사 🏢';
+                pos.textContent = location;
+            } else {
+                const currentTile = gameMap[gameState.player.y][gameState.player.x];
+                let location = '';
+                if (currentTile === 4) location = '지하철역 🚇';
+                else if (currentTile === 5) location = '횡단보도 🚦';
+                else if (currentTile === 3) location = '사무실 앞 🏢';
+                else if (gameState.player.y < 8) location = '사무실 근처 🏙️';
+                else if (gameState.player.y > 14) location = '지하철역 근처 🚉';
+                else location = '출근길 중간 🚶‍♂️';
+                pos.textContent = location;
+            }
         }
 
         function updateTime() {
@@ -591,11 +960,14 @@
         function render() {
             ctx.fillStyle = '#2c3e50';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const currentMap = gameState.inOffice ? officeMap : gameMap;
+            
             for (let y = 0; y < MAP_HEIGHT; y++) {
                 for (let x = 0; x < MAP_WIDTH; x++) {
                     const tileX = x * TILE_SIZE;
                     const tileY = y * TILE_SIZE;
-                    switch (gameMap[y][x]) {
+                    switch (currentMap[y][x]) {
                         case 0:
                             ctx.fillStyle = '#34495e';
                             ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
@@ -675,6 +1047,52 @@
                             ctx.textAlign = 'center';
                             ctx.fillText('🪑', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 3);
                             break;
+                        case 10: // 책상
+                            ctx.fillStyle = '#8B4513';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#D2B48C';
+                            ctx.fillRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                            ctx.font = '16px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('📋', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 11: // 내 자리 (PC가 있는 책상)
+                            ctx.fillStyle = '#8B4513';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#D2B48C';
+                            ctx.fillRect(tileX + 2, tileY + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                            // PC 모니터 표시
+                            ctx.fillStyle = '#2c3e50';
+                            ctx.fillRect(tileX + 8, tileY + 8, 16, 12);
+                            ctx.fillStyle = gameState.pcOn ? '#00ff00' : '#333';
+                            ctx.fillRect(tileX + 10, tileY + 10, 12, 8);
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('💻', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 12: // 복사기
+                            ctx.fillStyle = '#ecf0f1';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.font = '16px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🖨️', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 13: // 화장실
+                            ctx.fillStyle = '#3498db';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.font = '16px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🚻', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 5);
+                            break;
+                        case 14: // 회의실
+                            ctx.fillStyle = '#e67e22';
+                            ctx.fillRect(tileX, tileY, TILE_SIZE, TILE_SIZE);
+                            ctx.fillStyle = '#f39c12';
+                            ctx.fillRect(tileX + 4, tileY + 12, TILE_SIZE - 8, 8);
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.fillText('🏢', tileX + TILE_SIZE/2, tileY + TILE_SIZE/2 + 3);
+                            break;
                     }
                 }
             }
@@ -726,7 +1144,8 @@
         }
 
         function gameLoop() {
-            if (!gameState.gameComplete) movePlayer();
+            // 회사에 있거나 게임이 완료되지 않았으면 움직임 허용
+            if (!gameState.gameComplete || gameState.inOffice) movePlayer();
             render();
             requestAnimationFrame(gameLoop);
         }
