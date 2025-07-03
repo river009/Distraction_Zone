@@ -379,6 +379,9 @@
             // 스페이스바로 전환된 후에는 "Press Enter"를 "Press Space"로 변경
             if (gameState.switchedToSpace) {
                 html = html.replace(/Press Enter to continue\.\.\./g, 'Press Space to continue...');
+                html = html.replace(/답장하려면 Enter를 누르세요/g, '답장하려면 스페이스바를 누르세요');
+                html = html.replace(/Enter를 누르세요/g, '스페이스바를 누르세요');
+                html = html.replace(/Enter로 메시지 넘기기/g, '스페이스바로 메시지 넘기기');
             }
             
             messageBox.innerHTML = html;
@@ -444,9 +447,27 @@
                         `
                     });
 
-                    // 휴대폰 확인일 때 추가 메시지들
-                    if (emotion.icon === '📱') {
-                        // 인스타 릴스 메시지
+                    // 점심 메뉴일 때 시욱이가 우기의 게임 조작 불만 메시지를 전달
+                    if (emotion.icon === '🍚') {
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-ryu" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="css/image/rw.png" alt="류시욱 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #34495e; font-size:15px;">류시욱</div>
+                                        <div style="margin-top:4px; background: rgba(52, 73, 94, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #34495e;">
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오후 4:07]</div>
+                                            <div style="color: #2c3e50;">우기가 말하는데... "아 한칸씩"</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
                         messages.push({
                             html: `
                                 <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
@@ -454,7 +475,88 @@
                                         <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="우기 프로필">
                                     </div>
                                     <div>
-                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기 🎀🤍🍬🐻</div>
+                                        <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-size: 12px; color: #FFF; margin-bottom: 4px;">[오후 4:07]</div>
+                                            <div style="color: #FFF; margin-bottom: 6px;">안움지깅고</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="우기 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기 🎀🤍🍬🐻</div>
+                                        <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-size: 12px; color: #FFF; margin-bottom: 4px;">[오후 4:07]</div>
+                                            <div style="color: #FFF; margin-bottom: 6px;">졸라 예민하게 움직여서</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="우기 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기 🎀🤍🍬🐻</div>
+                                        <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-size: 12px; color: #FFF; margin-bottom: 4px;">[오후 4:07]</div>
+                                            <div style="color: #FFF; margin-bottom: 6px;">답답ㅎ래요</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="우기 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">우기 🎀🤍🍬🐻</div>
+                                        <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-size: 12px; color: #FFF; margin-bottom: 4px;">[오후 4:07]</div>
+                                            <div style="color: #FFF;">썅</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 8px; text-align: center;">
+                                    Press Enter to continue...
+                                </div>
+                            `
+                        });
+                    }
+
+                    // 휴대폰 확인일 때 추가 메시지들
+                    if (emotion.icon === '📱') {
+                        // 인스타 릴스 메시지
+                        messages.push({
+                            html: `
+                                <div class="msg-bubble npc-hyojin" style="display:flex;align-items:flex-start;">
+                                    <div class="npc-profile">
+                                        <img src="../css/image/hyo.png" alt="효진 프로필">
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: bold; color: #ff85a2; font-size:15px;">효진</div>
                                         <div style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); padding: 12px; border-radius: 10px; color: white; margin-top:7px;">
                                             <span style="font-weight:500;">Instagram</span><br>
                                             <span style="background:rgba(255,255,255,0.15); padding:7px 10px; border-radius:7px; display:inline-block; margin-top:8px;">📹 <strong>hxojxx님</strong>이 릴스를 보냈습니다!</span>
@@ -468,18 +570,17 @@
                         });
 
                         // 효진이 메타 메시지 (스페이스바로 전환 요청)
-                        // 효진이 메타 메시지 (스페이스바로 전환 요청) - 한 번만
                         if (!gameState.hyojinSpaceEventTriggered) {
                             gameState.hyojinSpaceEventTriggered = true;
                             messages.push({
                                 html: `
-                                    <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                    <div class="msg-bubble npc-hyojin" style="display:flex;align-items:flex-start;">
                                         <div class="npc-profile">
-                                            <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="효진 프로필">
+                                            <img src="../css/image/hyo.png" alt="효진 프로필">
                                         </div>
                                         <div>
-                                            <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
-                                            <div style="margin-top:4px; background: rgba(163, 216, 244, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #a3d8f4;">
+                                            <div style="font-weight: bold; color: #ff85a2; font-size:15px;">효진</div>
+                                            <div style="margin-top:4px; background: rgba(255, 133, 162, 0.1); padding: 12px; border-radius: 8px; border-left: 4px solid #ff85a2;">
                                                 <div style="font-size: 12px; color: #FFF; margin-bottom: 4px;">[지금]</div>
                                                 <div style="color: #FFF;">자꾸 엔터 눌러야 하는걸 스페이스 바를 누르게 돼 ㅡㅡ 바꿔줄 수 있니?</div>
                                             </div>
@@ -493,6 +594,7 @@
                                     // 스페이스바로 전환
                                     gameState.switchedToSpace = true;
                                     showSystemMessage();
+                                    updateAllMessagesToSpace();
                                 }
                             });
                         }
@@ -500,12 +602,12 @@
                         // 2. ‘여행갈때 친구 3명 무리 특’ 릴스 소개 (썸네일+애니 효과)
                         messages.push({
                             html: `
-                                <div class="msg-bubble npc-wugi" style="display:flex;align-items:flex-start;">
+                                <div class="msg-bubble npc-hyojin" style="display:flex;align-items:flex-start;">
                                     <div class="npc-profile">
-                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%23a3d8f4'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='18' y='14' width='3' height='3' fill='%2386a8e7'/><rect x='14' y='21' width='4' height='2' fill='%23f6d7f2'/></svg>" alt="효진 프로필">
+                                        <img src="../css/image/hyo.png" alt="효진 프로필">
                                     </div>
                                     <div>
-                                        <div style="font-weight: bold; color: #a3d8f4; font-size:15px;">효진</div>
+                                        <div style="font-weight: bold; color: #ff85a2; font-size:15px;">효진</div>
                                         <div style="background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); padding: 13px; border-radius: 14px; color: white; margin-top:8px; box-shadow:0 6px 32px rgba(0,0,0,0.23);">
                                             <div style="font-size:15px; font-weight:bold; margin-bottom:7px; line-height:1.3;">
                                                 <span style="background:rgba(0,0,0,0.11); padding:5px 12px; border-radius:9px; font-weight:700; font-size:16px;">
@@ -569,38 +671,6 @@
             });
         }
 
-        // 류시욱 이벤트 체크 (딴생각 2개일 때 1번만)
-        function checkRyuEvent() {
-            if (gameState.collectedEmotions.length === 2 && !gameState.ryuEventTriggered) {
-                gameState.ryuEventTriggered = true;
-                
-                // 잠시 후에 시욱이 메시지가 나타나도록 지연
-                setTimeout(() => {
-                    addToMessageQueue([
-                        {
-                            html: `
-                                <div class="msg-bubble npc-ryu" style="display:flex;align-items:flex-start;">
-                                    <div class="npc-profile">
-                                        <img src="data:image/svg+xml;utf8,<svg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'><rect width='32' height='32' fill='%2334495e'/><rect x='7' y='9' width='18' height='18' fill='%23fff'/><rect x='11' y='14' width='3' height='3' fill='%232c3e50'/><rect x='18' y='14' width='3' height='3' fill='%232c3e50'/><rect x='13' y='21' width='6' height='2' fill='%23e67e22'/></svg>" alt="류시욱 프로필">
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: bold; color: #34495e; font-size:15px;">류시욱</div>
-                                        <div style="margin-top:4px; background: rgba(52, 73, 94, 0.10); padding: 12px; border-radius: 8px; border-left: 4px solid #34495e;">
-                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">[오후 12:30]</div>
-                                            <div style="color: #2c3e50;">점심 뭐먹지? 같이 먹을사람?</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
-                                    Press Space to continue...
-                                </div>
-                            `
-                        }
-                    ]);
-                }, 1000); // 1초 후에 메시지 표시
-            }
-        }
-
         // 사무실 도달 체크
         function checkOfficeReached() {
             if (gameMap[gameState.player.y][gameState.player.x] === 3) {
@@ -647,7 +717,7 @@
                                 <div style="background: rgba(231, 76, 60, 0.10); padding: 15px; border-radius: 7px; border-left: 4px solid #e74c3c; text-align: center; margin-top:6px;">
                                     <div style="font-size: 22px; margin-bottom: 6px;">🤗💕</div>
                                     <div style="font-weight: bold; color: #e74c3c;">"고생했어! 오늘도 출근 성공!"</div>
-                                    <div style="margin-top: 7px; font-size: 14px;">*김현진이 따뜻하게 안아줍니다*</div>
+                                    <div style="margin-top: 7px; font-size: 14px;">*따뜻하게 안아줍니다*</div>
                                 </div>
                                 <div style="font-size: 12px; color: #27ae60; margin-top: 13px; text-align: center;">
                                     🎉 축하합니다! 모든 딴생각을 수집하며 무사히 출근을 완료했습니다! 🎉
@@ -784,7 +854,7 @@
                                 <div style="color: #1976d2;">너모졸려</div>
                             </div>
                             <div style="text-align: center; font-size: 12px; color: #666;">
-                                답장하려면 Enter를 누르세요
+                                <span id="reply-instruction">답장하려면 Enter를 누르세요</span>
                             </div>
                         </div>
                     `
@@ -1015,54 +1085,77 @@
 
         // 시스템 수정 완료 메시지 표시
         function showSystemMessage() {
-            const messageBox = document.getElementById('messageBox');
-            messageBox.innerHTML = `
-                <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
-                            background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-                    <div style="background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 50%, #45b7d1 100%); 
-                                color: white; padding: 60px 80px; border-radius: 30px; 
-                                font-size: 48px; font-weight: bold; text-align: center;
-                                box-shadow: 0 30px 80px rgba(0,0,0,0.6); border: 6px solid #fff;
-                                animation: megaBounce 0.8s ease-out; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">
-                        🚀 스페이스바로 변경됩니다!!! 🚀<br>
-                        <div style="font-size: 28px; margin-top: 20px; font-weight: normal; line-height: 1.4;">
-                            이제부터 모든 조작이<br>
-                            <span style="color: #FFD700; font-weight: bold; font-size: 36px; text-shadow: 2px 2px 8px rgba(255,215,0,0.5);">
-                                🔥 SPACE BAR 🔥
-                            </span><br>
-                            으로 바뀝니다! ✨
-                        </div>
-                    </div>
+            gameState.overlayActive = true;
+            isShowingMessage = true; 
+
+            const overlay = document.createElement('div');
+            overlay.id = 'spacebar-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100vw';
+            overlay.style.height = '100vh';
+            overlay.style.background = 'rgba(0,0,0,0.85)';
+            overlay.style.zIndex = '99999';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.textAlign = 'center';
+            overlay.style.cursor = 'pointer';
+
+            overlay.innerHTML = `
+                <div style="background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%); 
+                            color: white; padding: 50px 70px; border-radius: 25px; 
+                            font-size: 5vw; font-weight: 900;
+                            box-shadow: 0 25px 70px rgba(0,0,0,0.5); border: 5px solid rgba(255,255,255,0.8);
+                            animation: fadeInZoom 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #2575fc, 0 0 40px #2575fc, 0 0 50px #2575fc, 0 0 60px #2575fc, 0 0 70px #2575fc;
+                            ">
+                    ok! 이제부터는 스페이스바로 변경!
+                    <div style="font-size: 2vw; font-weight: 400; margin-top: 25px; opacity: 0.8; animation: pulseText 2s infinite alternate;">(스페이스바를 눌러 계속)</div>
                 </div>
                 <style>
-                    @keyframes megaBounce {
-                        0% { transform: scale(0.1); opacity: 0; }
-                        30% { transform: scale(1.15); }
-                        50% { transform: scale(0.95); }
-                        70% { transform: scale(1.05); }
-                        100% { transform: scale(1); opacity: 1; }
+                    @keyframes fadeInZoom {
+                        from { opacity: 0; transform: scale(0.5); }
+                        to { opacity: 1; transform: scale(1); }
+                    }
+                    @keyframes pulseText {
+                        from { opacity: 0.6; }
+                        to { opacity: 1; }
                     }
                 </style>
             `;
-            messageBox.style.display = 'block';
             
-            // 모든 기존 메시지를 스페이스바로 변경
+            document.body.appendChild(overlay);
             updateAllMessagesToSpace();
-            
-            // 4초 후 자동으로 사라짐
-            setTimeout(() => {
-                messageBox.style.display = 'none';
-                isShowingMessage = false;
-                
-                // 스페이스바 전환 완료 후 시욱이 이벤트 체크
-                checkRyuEvent();
-            }, 4000);
+
+            const dismissOverlay = (e) => {
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    if (document.body.contains(overlay)) {
+                        document.body.removeChild(overlay);
+                    }
+                    gameState.overlayActive = false;
+                    isShowingMessage = false;
+                    checkRyuEvent();
+                    document.removeEventListener('keydown', dismissOverlay);
+                }
+            };
+            document.addEventListener('keydown', dismissOverlay);
         }
 
         // 모든 메시지를 스페이스바로 변경
         function updateAllMessagesToSpace() {
-            // 이후 모든 메시지에서 "Press Enter"를 "Press Space"로 변경하는 함수
-            // 실제로는 gameState.switchedToSpace 플래그로 제어됨
+            // 한국어 UI 텍스트 업데이트
+            const controlInstructions = document.getElementById('control-instructions');
+            const replyInstruction = document.getElementById('reply-instruction');
+            
+            if (controlInstructions) {
+                controlInstructions.textContent = '화살표 키로 이동, 스페이스바로 메시지 넘기기';
+            }
+            if (replyInstruction) {
+                replyInstruction.textContent = '답장하려면 스페이스바를 누르세요';
+            }
         }
 
         // 스페이스바 안내 메시지 표시
@@ -1379,7 +1472,7 @@
                     <div style="margin-top:8px;">딴생각 금지구역에 오신 것을 환영합니다!<br>
                     지하철역에서 사무실까지 출근길을 걸으며<br>
                     소중한 딴생각들을 수집해보세요 💭</div>
-                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 13px;">화살표 키로 이동, Enter로 메시지 넘기기</div>
+                    <div id="control-instructions" style="font-size: 12px; color: #7f8c8d; margin-top: 13px;">화살표 키로 이동, Enter로 메시지 넘기기</div>
                 </div>
                 <div style="font-size: 10px; color: #7f8c8d; margin-top: 10px; text-align: center;">
                     Press Enter to start...
